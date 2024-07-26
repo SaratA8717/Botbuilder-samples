@@ -1,52 +1,67 @@
 # Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
 # More GitHub Actions for Azure: https://github.com/Azure/actions
-
+ 
 name: Build and deploy ASP.Net Core app to Azure Web App - azureweb9810
-
+defaults:
+  run:
+    working-directory: './samples/csharp_dotnetcore/02.echo-bot'
 on:
   push:
     branches:
       - main
   workflow_dispatch:
-
+ 
+env:
+  AZURE_WEBAPP_NAME: azureweb9810
+  CONFIGURATION: Release
+  DOTNET_CORE_VERSION: 8.0.x
+  PROJECT_PATH: samples/csharp_dotnetcore/02.echo-bot/EchoBot.csproj
+  DOTNET_CLI_TELEMETRY_OPTOUT: 1
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
+  DOTNET_NOLOGO: true
+  DOTNET_GENERATE_ASPNET_CERTIFICATE: false
+  DOTNET_ADD_GLOBAL_TOOLS_TO_PATH: false
+  DOTNET_MULTILEVEL_LOOKUP: 0
+ 
 jobs:
   build:
     runs-on: windows-latest
-
+ 
     steps:
       - uses: actions/checkout@v4
-
+ 
       - name: Set up .NET Core
         uses: actions/setup-dotnet@v1
         with:
           dotnet-version: '8.x'
           include-prerelease: true
-
-      - name: Build with dotnet
-        run: dotnet build --configuration Release
-
-      - name: dotnet publish
-        run: dotnet publish -c Release -o ${{env.DOTNET_ROOT}}/myapp
-
+ 
+     # Run dotnet build and publish
+      - name: dotnet build and publish
+        run: |
+          dotnet restore
+          dotnet build --configuration Release
+          dotnet publish -c Release --property:PublishDir='${{ env.AZURE_WEBAPP_PACKAGE_PATH }}/azureweb9810'
+ 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v3
         with:
           name: .net-app
-          path: ${{env.DOTNET_ROOT}}/myapp
-
+          path: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}/azureweb9810
+ 
   deploy:
     runs-on: windows-latest
     needs: build
     environment:
       name: 'Production'
       url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
-
+ 
     steps:
       - name: Download artifact from build job
         uses: actions/download-artifact@v3
         with:
           name: .net-app
-
+ 
       - name: Deploy to Azure Web App
         id: deploy-to-webapp
         uses: azure/webapps-deploy@v2
